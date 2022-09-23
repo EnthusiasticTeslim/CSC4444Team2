@@ -1,2 +1,0 @@
-Blender version 3.3.0
-python version 3.10.2 (You can only use this version)
