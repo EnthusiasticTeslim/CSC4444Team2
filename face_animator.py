@@ -4,6 +4,8 @@ import mediapipe as mp
 import numpy as np
 import time
 
+from rig_controller import RigController
+
 # Mediapipe setup
 mp_draw = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
@@ -53,7 +55,7 @@ class FaceAnimator():
         if video_source is not None:
             self.video_source = video_source
 
-    def animate(self, rig_controller=None):
+    def animate(self, rig_controller: RigController = None):
         self.start_camera()
         self.get_current_frame()
 
@@ -118,6 +120,7 @@ class FaceAnimator():
                 self.determine_head_rotation(image_points)
                 self.show_3D_position(image_points)
 
+                # Control rig to animate
                 if rig_controller is not None:
                     rig_controller.control_bones(
                         face_shape=image_points,

@@ -4,7 +4,7 @@ from face_animator import FaceAnimator
 
 def test():
     faceanim = FaceAnimator(
-        video_source='footage/video.mp4'
+        video_source='footage/video2.mp4'
     )
     while True:
         faceanim.animate()
