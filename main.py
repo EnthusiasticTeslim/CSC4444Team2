@@ -11,7 +11,7 @@ def test():
         # Press q or ctrl + c to quit 
         if(cv2.waitKey(1) & 0xff == ord("q")):
             break
-    cv2.destroyAllWindows()
+    faceanim.end_session()
     
 if __name__ == "__main__":
     test()
