@@ -10,27 +10,29 @@ mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1)
 drawing_spec = mp_draw.DrawingSpec(thickness=1, circle_radius=1)
 
+
 class FaceAnimator():
     # cv2 capture
     _cap = None
-    current_frame = None # Will hold current video frame 
-    video_source = 0 # Webcam by default
-    
+    current_frame = None  # Will hold current video frame
+    video_source = 0  # Webcam by default
+
     # Camera resolution
-    cam_height = 480
-    cam_width = 640
-    
+    cam_height = 1080
+    cam_width = 1920
+
     # Numpy variables
-    # NP array to hold rotation matrix
+    # NP arrays to hold rotation matrix
     rotation_vector = None
-    # Used for determining 3D rotation 
+    translation_vector = None
+    # Used for determining 3D rotation
     dist_coeffs = np.zeros((4, 1))  # Assuming no lens distortion
-    # 3D model points. 
+    # 3D model points.
     model_points = np.array([
         # Nose tip
         (0.0, 0.0, 0.0),
-        # Chin             
-        (0.0, -330.0, -65.0),        
+        # Chin
+        (0.0, -330.0, -65.0),
         # Left eye left corner
         (-225.0, 170.0, -135.0),
         # Right eye right corne
@@ -47,29 +49,29 @@ class FaceAnimator():
          [0.0, 0.0, 1.0]], dtype=np.float32
     )
 
-    def __init__(self, video_source = None):
+    def __init__(self, video_source=None):
         if video_source is not None:
             self.video_source = video_source
-        
+
     def animate(self, rig_controller=None):
         self.start_camera()
         self.get_current_frame()
-        
+
         current_frameRGB = cv2.cvtColor(
-            self.current_frame, 
+            self.current_frame,
             cv2.COLOR_BGR2RGB
         )
-        
+
         results = face_mesh.process(current_frameRGB)
-        
+
         if results.multi_face_landmarks:
             face_lms = results.multi_face_landmarks[0]
             shape = face_lms.landmark
-            
+
             def get_2D_point(shape):
                 ih, iw, ic = self.current_frame.shape
                 return (int(shape.x * iw), int(shape.y * ih))
-            
+
             # Will be used to determine head rotation using cv2.PnP()
             image_points = np.array([
                 # Nose tip
@@ -85,8 +87,7 @@ class FaceAnimator():
                 # Right mouth corner
                 get_2D_point(shape[273])
             ], dtype=np.float32)
-            
-            
+
             # For testing purposes to calibrate image_points using indexes shown on image
             # Displayed in red
             for index, landmark in enumerate(shape):
@@ -98,7 +99,7 @@ class FaceAnimator():
                     (x, y),
                     cv2.FONT_HERSHEY_PLAIN,
                     1,
-                    (0,10,225),
+                    (0, 10, 225),
                     2
                 )
 
@@ -116,22 +117,21 @@ class FaceAnimator():
                 )
                 self.determine_head_rotation(image_points)
                 self.show_3D_position(image_points)
-                
+
                 if rig_controller is not None:
                     rig_controller.control_bones(
                         face_shape=image_points,
                         rotation_vector=self.rotation_vector,
                         first_angle=self.first_angle
                     )
-            
-            #Optionally use mediapipe to draw landmarks
+
+            # Optionally use mediapipe to draw landmarks
             # mpDraw.draw_landmarks(self.current_frame, face_lms, mpFaceMesh.FACEMESH_CONTOURS, drawSpec, drawSpec)
 
         cv2.imshow('Face Detection', self.current_frame)
         cv2.waitKey(1)
         return {'PASS_THROUGH'}
 
-    
     def determine_head_rotation(self, image_points: np.ndarray):
         # Refer to https://www.pythonpool.com/opencv-solvepnp/
         if self.rotation_vector is not None:
@@ -147,47 +147,38 @@ class FaceAnimator():
         else:
             (success, self.rotation_vector, self.translation_vector) = cv2.solvePnP(
                 objectPoints=self.model_points,
-                imagePoints=image_points, 
+                imagePoints=image_points,
                 cameraMatrix=self.camera_matrix,
                 distCoeffs=self.dist_coeffs,
                 flags=cv2.SOLVEPNP_ITERATIVE,
                 useExtrinsicGuess=False
             )
-    
-    # Shows the face direction        
+
+    # Shows the face direction
     def show_3D_position(self, image_points):
         nose_end_point2D, jacobian = cv2.projectPoints(
-            np.array([(0.0, 0.0, 1000.0)]),
-            self.rotation_vector, 
-            self.translation_vector, 
-            self.camera_matrix, 
+            np.array([(0., 0., 1000.)]),
+            self.rotation_vector,
+            self.translation_vector,
+            self.camera_matrix,
             self.dist_coeffs
         )
-        
-        for p in image_points:
-            cv2.circle(
-                self.current_frame,
-                (int(p[0]), int(p[1])), 
-                3, 
-                (0, 0, 255), 
-                -1
-            )
-            
+
         point1 = (
-            int(image_points[0][0]), 
+            int(image_points[0][0]),
             int(image_points[0][1])
         )
-        
+
         point2 = (
             int(nose_end_point2D[0][0][0]),
             int(nose_end_point2D[0][0][1])
         )
-        cv2.line(self.current_frame, point1, point2, (5, 215, 255), 5)
+        cv2.arrowedLine(self.current_frame, point1, point2, (5, 215, 255), 10)
 
     def start_camera(self):
         if self._cap == None:
             self._cap = cv2.VideoCapture(self.video_source)
-            #TODO: Fix use aspect ratio instead??
+            # TODO: Fix use aspect ratio instead??
             self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
             self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
             self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -198,11 +189,11 @@ class FaceAnimator():
         # Optimization
         self.current_frame.flags.writeable = False
         # TODO: Will need to resize image for standardization/consistency
-        # Distorts image tho, 
-        # self.current_frame = cv2.resize(
-        #     self.current_frame,
-        #     (self.cam_width, self.cam_height)
-        # )
+        # Distorts image tho,
+        self.current_frame = cv2.resize(
+            self.current_frame,
+            (self.cam_width, self.cam_height)
+        )
 
     def end_session(self):
         cv2.destroyAllWindows()
