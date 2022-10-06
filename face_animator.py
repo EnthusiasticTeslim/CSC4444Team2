@@ -17,7 +17,7 @@ class FaceAnimator():
     # cv2 capture
     _cap = None
     current_frame = None  # Will hold current video frame
-    video_source = 0  # Webcam by default
+    video_source = None # Webcam by default
 
     # Camera resolution
     cam_height = 1080
@@ -51,7 +51,7 @@ class FaceAnimator():
          [0.0, 0.0, 1.0]], dtype=np.float32
     )
 
-    def __init__(self, video_source=None):
+    def __init__(self, video_source):
         if video_source is not None:
             self.video_source = video_source
 
@@ -179,13 +179,13 @@ class FaceAnimator():
         cv2.arrowedLine(self.current_frame, point1, point2, (5, 215, 255), 10)
 
     def start_camera(self):
-        if self._cap == None:
-            self._cap = cv2.VideoCapture(self.video_source)
-            # TODO: Fix use aspect ratio instead??
-            self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
-            self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
-            self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            time.sleep(1.0)
+        if isinstance(self.video_source, str):
+            self._cap = cv2.VideoCapture(str(self.video_source))
+        if isinstance(self.video_source, int): self._cap = cv2.VideoCapture(self.video_source, cv2.CAP_DSHOW)
+        # TODO: Fix use aspect ratio instead??
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
+        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
+        self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     def get_current_frame(self):
         success, self.current_frame = self._cap.read()

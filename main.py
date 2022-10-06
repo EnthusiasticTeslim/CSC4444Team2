@@ -3,13 +3,12 @@ import cv2
 from face_animator import FaceAnimator
 
 def test():
-    faceanim = FaceAnimator(
-        video_source='footage/video2.mp4'
-    )
+    faceanim = FaceAnimator(0)
+    print(faceanim.video_source)
     while True:
         faceanim.animate()
-        # Press q or ctrl + c to quit 
-        if(cv2.waitKey(1) & 0xff == ord("q")):
+        # Press esc or ctrl + c to quit 
+        if(cv2.waitKey(1) & 0xff == 27): 
             break
     faceanim.end_session()
     
