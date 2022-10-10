@@ -53,10 +53,11 @@ class FaceAnimator():
 
     def __init__(self, video_source):
         if video_source is not None:
-            self.video_source = video_source
+            self.video_source = video_sourcese
+        lf.start_camera()
+            
 
     def animate(self, rig_controller: RigController = None):
-        self.start_camera()
         self.get_current_frame()
 
         current_frameRGB = cv2.cvtColor(
