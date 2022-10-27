@@ -53,7 +53,7 @@ class FaceAnimator():
 
     def __init__(self, video_source):
         if video_source is not None:
-            self.video_source = video_sourcese
+            self.video_source = video_source
         lf.start_camera()
             
 
