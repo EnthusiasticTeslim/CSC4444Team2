@@ -99,36 +99,42 @@ class FaceAnimator():
                 'chin': self.get_3D_point(shape[175]),
                 'brow_L': self.get_3D_point(shape[105]),
                 'brow_R': self.get_3D_point(shape[334]),
+                'brow_Base': self.get_3D_point(shape[8]),
                 'eye_corner_R': self.get_3D_point(shape[226]),
                 'eye_corner_L': self.get_3D_point(shape[342]),
                 'eyelid_up_L': self.get_3D_point(shape[159]),
-                'eyelid_up_L': self.get_3D_point(shape[144]),
+                'eyelid_low_L': self.get_3D_point(shape[144]),
                 'eyelid_up_R': self.get_3D_point(shape[386]),
                 'eyelid_low_R': self.get_3D_point(shape[374]),
                 'mouth_L': self.get_3D_point(shape[57]),
                 'mouth_R': self.get_3D_point(shape[291]),
-                'mouth_U': self.get_3D_point(shape[0]),
-                'mouth_D': self.get_3D_point(shape[17])
+                'mouth_U': self.get_3D_point(shape[13]),
+                'mouth_D': self.get_3D_point(shape[14])
             }
-            point_names = {'nose_tip', 'chin', 'eye_corner_R',
-                           'eye_corner_L', 'mouth_L', 'mouth_R'}
+            selected_points = [
+                point_dict['nose_tip'], 
+                point_dict['chin'], 
+                point_dict['eye_corner_L'], 
+                point_dict['eye_corner_R'],
+                point_dict['mouth_L'], 
+                point_dict['mouth_R']
+            ]
             image_2D_points = []
             image_3D_points = []
-            for k, landmark in point_dict.items():
-                x, y, z = landmark
-                if k in point_names:
-                    image_2D_points.append((x, y))
-                    image_3D_points.append((x, y, z))
-                    # Shows the selected landmarks
-                cv2.putText(
-                    self.current_frame,
-                    f'.',
-                    (x, y),
-                    cv2.FONT_HERSHEY_PLAIN,
-                    2,
-                    (0, 190, 225),
-                    3
-                )
+            for point in selected_points:
+                x, y, z = point[0],point[1],point[2]
+                image_2D_points.append((x, y))
+                image_3D_points.append((x, y, z))
+                # Shows the selected landmarks
+                # cv2.putText(
+                #     self.current_frame,
+                #     f'.',
+                #     (x, y),
+                #     cv2.FONT_HERSHEY_PLAIN,
+                #     2,
+                #     (0, 190, 225),
+                #     3
+                # )
             face2D = np.array(image_2D_points, dtype=np.float64)
             face3D = np.array(image_3D_points, dtype=np.float64)
             self.determine_head_rotation(face2D, face3D)
@@ -137,10 +143,9 @@ class FaceAnimator():
                 rig_controller.control_bones(
                     face_shape_dict=point_dict,
                     rotation_vector=self.rotation_vector,
-                    first_angle=self.first_angle
                 )
             # Optionally use mediapipe to draw landmarks
-            # mpDraw.draw_landmarks(self.current_frame, face_lms, mpFaceMesh.FACEMESH_CONTOURS, drawSpec, drawSpec)
+            mp_draw.draw_landmarks(self.current_frame, face_lms, mp_face_mesh.FACEMESH_CONTOURS, drawing_spec, drawing_spec)
 
         cv2.imshow('Face Detection', self.current_frame)
         cv2.waitKey(1)
@@ -150,7 +155,7 @@ class FaceAnimator():
         # Refer to https://www.pythonpool.com/opencv-solvepnp/
         if self.rotation_vector is not None:
             (success, self.rotation_vector, self.translation_vector) = cv2.solvePnP(
-                objectPoints=image_3D_points,
+                objectPoints=self.model_points,
                 imagePoints=image_2D_points,
                 cameraMatrix=self.camera_matrix,
                 distCoeffs=self.dist_coeffs,
@@ -160,18 +165,17 @@ class FaceAnimator():
             )
         else:
             (success, self.rotation_vector, self.translation_vector) = cv2.solvePnP(
-                objectPoints=image_3D_points,
+                objectPoints=self.model_points,
                 imagePoints=image_2D_points,
                 cameraMatrix=self.camera_matrix,
                 distCoeffs=self.dist_coeffs,
                 flags=cv2.SOLVEPNP_ITERATIVE,
                 useExtrinsicGuess=False
             )
-        if not hasattr(self, 'first_angle'):
-            self.first_angle = np.copy(self.rotation_vector)
+        
         nose3D = image_3D_points[0]
         nose3D[2] = nose3D[2] * 8000
-        self.show_3D_position(image_2D_points, nose3D=np.array([nose3D]))
+        # self.show_3D_position(image_2D_points, nose3D=np.array([nose3D]))
         # Shows the face direction
 
     def show_3D_position(self, image_points, nose3D):
@@ -205,7 +209,7 @@ class FaceAnimator():
     def get_current_frame(self):
         success, self.current_frame = self._cap.read()
         # Optimization
-        self.current_frame.flags.writeable = False
+        self.current_frame.flags.writeable = True
         # TODO: Will need to resize image for standardization/consistency
         # Distorts image tho,
         self.current_frame = cv2.resize(

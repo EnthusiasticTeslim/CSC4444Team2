@@ -7,9 +7,10 @@ def test():
     while True:
         faceanim.animate()                 
         # Press esc or ctrl + c to quit 
-        cv2.waitKey(0)
         if(cv2.waitKey(1) & 0xff == 27): 
             break
+        # cv2.waitKey(0)
+        
     faceanim.end_session()
     
 if __name__ == "__main__":

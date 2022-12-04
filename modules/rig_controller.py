@@ -26,25 +26,23 @@ class RigController():
         self.eyelid_down_left_bone = self.bones[eyelid_down_left_bone]
         self.eyelid_down_right_bone = self.bones[eyelid_down_right_bone]
 
-    def _control_head_rotation(self, rotation_vector, first_angle):
+    def _control_head_rotation(self, rotation_vector):
+        if not hasattr(self, 'first_angle'):
+            self.first_angle = numpy.copy(rotation_vector)
         # Rotation along x axis
-        x_value = rotation_vector[0] 
-        # - first_angle[0]
+        x_value = rotation_vector[0] - self.first_angle[0]
         # Rotation along y axis
-        y_value = rotation_vector[1]
-        # - first_angle[1]
+        y_value = rotation_vector[1] - self.first_angle[1]
         # Rotation along z axis
-        z_value = rotation_vector[2] 
-        # - first_angle[2]
+        z_value = rotation_vector[2] - self.first_angle[2]
         # Up/Down
-        self.head_rotation_bone.rotation_euler[0] = x_value / 1
+        self.head_rotation_bone.rotation_euler[0] = self.smooth_value("h_x", 5, (x_value)) / 1 
         # Left/Right
-        self.head_rotation_bone.rotation_euler[1] = z_value / 1.3
+        self.head_rotation_bone.rotation_euler[1] = self.smooth_value("h_z", 5, (z_value)) / 1.3
         # Sideways
-        self.head_rotation_bone.rotation_euler[2] = 1 * y_value  / 1.5
+        self.head_rotation_bone.rotation_euler[2] = self.smooth_value("h_y", 5, -(y_value)) / 1.5 
         # Update animation
-        self.head_rotation_bone.keyframe_insert(
-            data_path="rotation_euler", index=-1)
+        self.head_rotation_bone.keyframe_insert(data_path="rotation_euler", index=-1)
 
     def _control_mouth(self, face_dict):
         mouth_top = numpy.asarray(face_dict['mouth_U'])
@@ -70,13 +68,14 @@ class RigController():
         )
         self.mouth_bone.keyframe_insert(data_path="location", index=-1)
 
-    # def _control_eyebrows(self,face_shape_dict):
-    #     #eyebrows
-    #     bones["brow_ctrl_L"].location[2] = self.smooth_value("b_l", 3, (self.get_range("brow_left", numpy.linalg.norm(shape[19] - shape[27])) -0.5) * 0.04)
-    #     bones["brow_ctrl_R"].location[2] = self.smooth_value("b_r", 3, (self.get_range("brow_right", numpy.linalg.norm(shape[24] - shape[27])) -0.5) * 0.04)
-        
-    #     bones["brow_ctrl_L"].keyframe_insert(data_path="location", index=2)
-    #     bones["brow_ctrl_R"].keyframe_insert(data_path="location", index=2)
+    def _control_eyebrows(self,face_dict):
+        brow_L = numpy.asarray(face_dict['brow_L'])
+        brow_R = numpy.asarray(face_dict['brow_R'])
+        brow_B = numpy.asarray(face_dict['brow_Base'])
+        self.eye_brow_left_bone.location[2] = self.smooth_value("b_l", 3, (self.get_range("brow_left", numpy.linalg.norm(brow_L - brow_B)) -0.5) * 0.04)
+        self.eye_brow_right_bone.location[2] = self.smooth_value("b_r", 3, (self.get_range("brow_right", numpy.linalg.norm(brow_R - brow_B)) -0.5) * 0.04)
+        self.eye_brow_left_bone.keyframe_insert(data_path="location", index=2)
+        self.eye_brow_right_bone.keyframe_insert(data_path="location", index=2)
         
 
     def _control_eyelids(self, face_dict):
@@ -101,10 +100,10 @@ class RigController():
         self.eyelid_down_left_bone.keyframe_insert(data_path="location", index=2)
         
 
-    def control_bones(self, face_shape_dict, rotation_vector, first_angle):
-        self._control_head_rotation(rotation_vector, first_angle)
+    def control_bones(self, face_shape_dict, rotation_vector):
+        self._control_head_rotation(rotation_vector)
         self._control_mouth(face_shape_dict)
-        # self._control_eyebrows(face_shape_dict)
+        self._control_eyebrows(face_shape_dict)
         self._control_eyelids(face_shape_dict)
 
     # Keeps a moving average of given length
