@@ -43,7 +43,7 @@ class CvAnimationOperator(bpy.types.Operator):
             "eyelid_low_ctrl_R"
         )
         self.animation_controller = FaceAnimator(
-            video_source="C:\\Users\\Me\\Desktop\\LSU\\2022\\Fall\\CSC 4444\\project\\CSC4444Team2\\footage\\video.mp4"
+            video_source=0
         )
 
     def __del__(self):
