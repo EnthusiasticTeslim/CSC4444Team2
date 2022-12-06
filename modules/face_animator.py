@@ -25,8 +25,8 @@ class FaceAnimator():
     video_source = None  # Webcam by default
 
     # Camera resolution
-    cam_height = 1080
-    cam_width = 1920
+    cam_height = 480
+    cam_width = 640
 
     # Numpy variables
     # NP arrays to hold rotation matrix
@@ -59,7 +59,7 @@ class FaceAnimator():
     def __init__(self, video_source):
         if video_source is not None:
             self.video_source = video_source
-        self.start_camera()
+            self.start_camera()
 
     def get_2D_point(self, shape):
         ih, iw, ic = self.current_frame.shape
@@ -81,18 +81,18 @@ class FaceAnimator():
             shape = face_lms.landmark
             # For testing purposes to calibrate image_points using indexes shown on image
             # Displayed in red
-            for index, landmark in enumerate(shape):
-                point = self.get_2D_point(landmark)
-                x, y = point
-                cv2.putText(
-                    self.current_frame,
-                    f'{index}',
-                    (x, y),
-                    cv2.FONT_HERSHEY_PLAIN,
-                    1,
-                    (0, 10, 225),
-                    2
-                )
+            # for index, landmark in enumerate(shape):
+            #     point = self.get_2D_point(landmark)
+            #     x, y = point
+            #     cv2.putText(
+            #         self.current_frame,
+            #         f'{index}',
+            #         (x, y),
+            #         cv2.FONT_HERSHEY_PLAIN,
+            #         1,
+            #         (0, 10, 225),
+            #         2
+            #     )
             # Will be used to determine head rotation using cv2.PnP()
             point_dict = {
                 'nose_tip': self.get_3D_point(shape[1]),
@@ -146,7 +146,6 @@ class FaceAnimator():
                 )
             # Optionally use mediapipe to draw landmarks
             mp_draw.draw_landmarks(self.current_frame, face_lms, mp_face_mesh.FACEMESH_CONTOURS, drawing_spec, drawing_spec)
-
         cv2.imshow('Face Detection', self.current_frame)
         cv2.waitKey(1)
         return {'PASS_THROUGH'}
@@ -200,8 +199,7 @@ class FaceAnimator():
         if isinstance(self.video_source, str):
             self._cap = cv2.VideoCapture(str(self.video_source))
         if isinstance(self.video_source, int):
-            self._cap = cv2.VideoCapture(self.video_source, cv2.CAP_DSHOW)
-        # TODO: Fix use aspect ratio instead??
+            self._cap = cv2.VideoCapture(self.video_source)
         self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
         self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)

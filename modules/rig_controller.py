@@ -106,7 +106,7 @@ class RigController():
         self._control_eyebrows(face_shape_dict)
         self._control_eyelids(face_shape_dict)
 
-    # Keeps a moving average of given length
+    """Keeps a moving average of given length""" 
     def smooth_value(self, name, length, value):
         if not hasattr(self, 'smooth'):
             self.smooth = {}
@@ -123,7 +123,7 @@ class RigController():
             sum += val
         return sum / self.smooth[name].size
 
-    # Keeps min and max values, then returns the value in a range 0 - 1
+    """Keeps min and max values, then returns the value in a range 0 - 1""" 
     def get_range(self, name, value):
         if not hasattr(self, 'range'):
             self.range = {}
