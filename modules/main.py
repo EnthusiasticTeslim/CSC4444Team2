@@ -3,7 +3,7 @@ import cv2
 from face_animator import FaceAnimator
 
 def test():
-    faceanim = FaceAnimator(video_source="C:\\Users\\Me\\Desktop\\LSU\\2022\\Fall\\CSC 4444\\project\\CSC4444Team2\\footage\\video.mp4")
+    faceanim = FaceAnimator(video_source=0)
     while True:
         faceanim.animate()                 
         # Press esc or ctrl + c to quit 
