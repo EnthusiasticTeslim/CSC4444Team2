@@ -5,7 +5,7 @@ from face_animator import FaceAnimator
 
 def test():
     script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-    video_file = os.path.join(script_dir, "../footage/video01_Teslim.mp4")
+    video_file = os.path.join(script_dir, "../footage/video.mp4")
     faceanim = FaceAnimator(video_source=video_file)
     while True:
         faceanim.animate()
