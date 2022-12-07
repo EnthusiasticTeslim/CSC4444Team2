@@ -69,7 +69,7 @@ class FaceAnimator():
         if video_source is not None:
             self.video_source = video_source
             script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-            face_rel_path = "emotionDetection/Emotion_detect"
+            face_rel_path = "emotion_model"
             face_model_path = os.path.join(script_dir, face_rel_path)
             self.emotion_detect_model = tf.keras.models.load_model(
                 face_model_path
