@@ -1,10 +1,11 @@
 
+from rig_controller import RigController
 import cv2
 import mediapipe as mp
 import numpy as np
-import time
-
-from rig_controller import RigController
+import tensorflow as tf
+import os
+from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordinates
 
 # Mediapipe setup
 mp_draw = mp.solutions.drawing_utils
@@ -15,6 +16,14 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_detection_confidence=0.8,
     min_tracking_confidence=0.9
 )
+
+mp_face_detection = mp.solutions.face_detection
+mp_drawing = mp.solutions.drawing_utils
+face_detection = mp_face_detection.FaceDetection(
+    model_selection=1,
+    min_detection_confidence=0.5
+)
+
 drawing_spec = mp_draw.DrawingSpec(thickness=1, circle_radius=1)
 
 
@@ -59,7 +68,14 @@ class FaceAnimator():
     def __init__(self, video_source):
         if video_source is not None:
             self.video_source = video_source
+            script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
+            face_rel_path = "emotionDetection/Emotion_detect"
+            face_model_path = os.path.join(script_dir, face_rel_path)
+            self.emotion_detect_model = tf.keras.models.load_model(
+                face_model_path
+            )
             self.start_camera()
+            
 
     def get_2D_point(self, shape):
         ih, iw, ic = self.current_frame.shape
@@ -112,29 +128,29 @@ class FaceAnimator():
                 'mouth_D': self.get_3D_point(shape[14])
             }
             selected_points = [
-                point_dict['nose_tip'], 
-                point_dict['chin'], 
-                point_dict['eye_corner_L'], 
+                point_dict['nose_tip'],
+                point_dict['chin'],
+                point_dict['eye_corner_L'],
                 point_dict['eye_corner_R'],
-                point_dict['mouth_L'], 
+                point_dict['mouth_L'],
                 point_dict['mouth_R']
             ]
             image_2D_points = []
             image_3D_points = []
             for point in selected_points:
-                x, y, z = point[0],point[1],point[2]
+                x, y, z = point[0], point[1], point[2]
                 image_2D_points.append((x, y))
                 image_3D_points.append((x, y, z))
                 # Shows the selected landmarks
-                # cv2.putText(
-                #     self.current_frame,
-                #     f'.',
-                #     (x, y),
-                #     cv2.FONT_HERSHEY_PLAIN,
-                #     2,
-                #     (0, 190, 225),
-                #     3
-                # )
+                cv2.putText(
+                    self.current_frame,
+                    f'.',
+                    (x, y),
+                    cv2.FONT_HERSHEY_PLAIN,
+                    2,
+                    (0, 190, 225),
+                    3
+                )
             face2D = np.array(image_2D_points, dtype=np.float64)
             face3D = np.array(image_3D_points, dtype=np.float64)
             self.determine_head_rotation(face2D, face3D)
@@ -144,11 +160,18 @@ class FaceAnimator():
                     face_shape_dict=point_dict,
                     rotation_vector=self.rotation_vector,
                 )
+            #Show emotions
+            self.display_emotion()
             # Optionally use mediapipe to draw landmarks
-            mp_draw.draw_landmarks(self.current_frame, face_lms, mp_face_mesh.FACEMESH_CONTOURS, drawing_spec, drawing_spec)
+            mp_draw.draw_landmarks(
+                self.current_frame, 
+                face_lms, mp_face_mesh.FACEMESH_CONTOURS, 
+                drawing_spec, 
+                drawing_spec
+            )
+            
         cv2.imshow('Face Detection', self.current_frame)
         cv2.waitKey(1)
-        return {'PASS_THROUGH'}
 
     def determine_head_rotation(self, image_2D_points: np.ndarray, image_3D_points: np.ndarray):
         # Refer to https://www.pythonpool.com/opencv-solvepnp/
@@ -171,7 +194,7 @@ class FaceAnimator():
                 flags=cv2.SOLVEPNP_ITERATIVE,
                 useExtrinsicGuess=False
             )
-        
+
         nose3D = image_3D_points[0]
         nose3D[2] = nose3D[2] * 8000
         # self.show_3D_position(image_2D_points, nose3D=np.array([nose3D]))
@@ -214,6 +237,63 @@ class FaceAnimator():
             self.current_frame,
             (self.cam_width, self.cam_height)
         )
+
+    def crop_img(self, img):
+        results = face_detection.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        if not results.detections:
+            return
+        else:
+            image_rows, image_cols, _ = img.shape
+            image_input = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            detection = results.detections[0]
+            location = detection.location_data
+            relative_bounding_box = location.relative_bounding_box
+            rect_start_point = _normalized_to_pixel_coordinates(
+                relative_bounding_box.xmin,
+                relative_bounding_box.ymin,
+                image_cols,
+                image_rows
+            )
+            rect_end_point = _normalized_to_pixel_coordinates(
+                relative_bounding_box.xmin + relative_bounding_box.width,
+                relative_bounding_box.ymin + relative_bounding_box.height,
+                image_cols,
+                image_rows
+            )
+            xleft, ytop = rect_start_point
+            xright, ybot = rect_end_point
+            crop_img = image_input[ytop: ybot, xleft: xright]
+            target_img_size = 48
+            return cv2.resize(crop_img, (target_img_size, target_img_size))
+
+    def detect_emotion(self, img):
+        img = self.crop_img(img)
+        if img is not None:
+            label_dict = {
+                0: 'Angry', 1: 'Disgust',
+                2: 'Fear', 3: 'Happy',
+                4: 'Neutral', 5: 'Sad',
+                6: 'Surprise'
+            }
+            img = np.expand_dims(img, axis=0)  # makes image shape (1,48,48)
+            img = img.reshape(1, 48, 48, 1)
+            result = self.emotion_detect_model.predict(img)
+            result = list(result[0])
+            img_index = result.index(max(result))
+            return label_dict[img_index]
+
+    def display_emotion(self):
+        emotion = self.detect_emotion(self.current_frame)
+        if emotion is not None:
+            cv2.putText(
+                self.current_frame,
+                emotion,
+                (50, 50),
+                cv2.FONT_HERSHEY_PLAIN,
+                2,
+                (0, 10, 225),
+                2
+            )
 
     def end_session(self):
         cv2.destroyAllWindows()
