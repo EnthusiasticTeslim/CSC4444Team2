@@ -36,3 +36,4 @@ RUNNING INSTRUCTIONS:
 - A window showing the video feed will show up and the character should start animating.
 
     ![screen_recording1](https://github.com/Endoplex/CSC4444Team2/blob/main/screenshots/Screen_recording1.gif)
+- To close animation, click back on the the Blender window and press `"Esc"` key.
